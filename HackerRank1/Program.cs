@@ -11,7 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddTransient<ILibrariesService, LibrariesService>();
 builder.Services.AddTransient<IBooksService, BooksService>();
 builder.Services.AddDbContext<LibraryContext>(options => options.UseInMemoryDatabase("librarydb"));
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddNewtonsoftJson();
 
 var jwtKey = builder.Configuration["Jwt:Key"]!;
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];

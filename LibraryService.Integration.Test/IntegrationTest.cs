@@ -35,8 +35,9 @@ namespace LibraryService.Tests
                         .EnableSensitiveDataLogging()
                         .Options);
             Client = _factory.WithWebHostBuilder(builder =>
-                builder.ConfigureServices(services =>
+                builder.ConfigureTestServices(services =>
                 {
+                    services.RemoveAll(typeof(DbContextOptions<LibraryContext>));
                     services.RemoveAll(typeof(LibraryContext));
                     services.AddSingleton(context);
 

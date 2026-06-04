@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using LibraryService.WebAPI.Data;
@@ -54,8 +53,18 @@ namespace LibraryService.WebAPI.Services
 
         public async Task<bool> Delete(Library library)
         {
-            // Complete the implementation
-            throw new NotImplementedException();
+            var existing = await _libraryContext.Libraries.FindAsync(library.Id);
+            if (existing == null)
+                return false;
+
+            var books = await _libraryContext.Books
+                .Where(b => b.LibraryId == library.Id)
+                .ToListAsync();
+
+            _libraryContext.Books.RemoveRange(books);
+            _libraryContext.Libraries.Remove(existing);
+            await _libraryContext.SaveChangesAsync();
+            return true;
         }
     }
 
