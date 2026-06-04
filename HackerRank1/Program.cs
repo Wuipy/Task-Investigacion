@@ -37,13 +37,22 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddCors(options =>
 {
+    var allowedOrigins = builder.Configuration
+        .GetSection("Cors:AllowedOrigins")
+        .Get<string[]>() ?? Array.Empty<string>();
+
     options.AddPolicy("DevCors", policy =>
     {
         policy.SetIsOriginAllowed(origin =>
             {
                 if (string.IsNullOrEmpty(origin)) return false;
                 if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri)) return false;
-                return uri.Host is "localhost" or "127.0.0.1";
+                if (uri.Host is "localhost" or "127.0.0.1") return true;
+                if (uri.Host.EndsWith(".github.io", StringComparison.OrdinalIgnoreCase))
+                    return true;
+                if (uri.Host.EndsWith(".netlify.app", StringComparison.OrdinalIgnoreCase))
+                    return true;
+                return allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase);
             })
             .AllowAnyHeader()
             .AllowAnyMethod()
