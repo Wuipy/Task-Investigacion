@@ -19,8 +19,13 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: Publish
-        run: dotnet publish HackerRank1/HackerRank1.csproj --configuration Release --output ./publish
-        
+        run: dotnet publish HackerRank1/HackerRank1.csproj --configuration Release --output ./publish /p:AspNetCoreHostingModel=OutOfProcess
+
+      - name: Verify publish output
+        run: |
+          if (!(Test-Path ./publish/HackerRank1.dll)) { throw "HackerRank1.dll not found in publish folder" }
+          if (!(Test-Path ./publish/web.config)) { throw "web.config not found in publish folder" }
+          Get-ChildItem ./publish -Name | Select-Object -First 20
       - name: Test with .NET
         run: dotnet test
 

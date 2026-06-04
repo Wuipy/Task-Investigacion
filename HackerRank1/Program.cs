@@ -2,11 +2,14 @@ using System.Text;
 using LibraryService.WebAPI.Data;
 using LibraryService.WebAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseIISIntegration();
 
 builder.Services.AddTransient<ILibrariesService, LibrariesService>();
 builder.Services.AddTransient<IBooksService, BooksService>();
@@ -14,9 +17,15 @@ builder.Services.AddDbContext<LibraryContext>(options => options.UseInMemoryData
 builder.Services.AddControllers()
     .AddNewtonsoftJson();
 
-var jwtKey = builder.Configuration["Jwt:Key"]!;
-var jwtIssuer = builder.Configuration["Jwt:Issuer"];
-var jwtAudience = builder.Configuration["Jwt:Audience"];
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
+
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? "clave_super_secreta_para_la_tarea_123456789";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "MyApp";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "MyAppUsers";
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -97,17 +106,30 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
+app.UseForwardedHeaders();
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "LibraryService API v1");
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(new { error = "Error interno del servidor" });
     });
+});
 
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "LibraryService API v1");
+});
 
 app.UseRouting();
 app.UseCors("DevCors");
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapGet("/", () => Results.Ok(new { status = "ok", service = "LibraryService API" }));
+app.MapGet("/health", () => Results.Ok("healthy"));
 app.MapControllers();
 
 app.Run();
